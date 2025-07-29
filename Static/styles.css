@@ -156,18 +156,26 @@ main {
 /* Movie cards */
 .movie-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(2,1fr);
     gap: 30px;
     margin-top: 30px;
 }
 
 .movie-card {
+    display: flex;
+    align-items: center;;
     background-color: #1f1f1f;
     border-radius: 15px;
     overflow: hidden;
     box-shadow: 0 5px 15px rgba(0,0,0,0.5);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     border: 2px solid transparent;
+}
+.movie-card .moview-poster {
+    width: 100%;
+    height: 300px;
+    overflow: hidden;
+    border-radius: 15px 15px 0 0;
 }
 
 .movie-card:hover {
@@ -178,7 +186,7 @@ main {
 
 .movie-card img {
     width: 100%;
-    height: 400px;
+    height: 300px;
     object-fit: cover;
 }
 
@@ -486,4 +494,138 @@ footer {
     color: #ff3c00;
     text-decoration: none;
     font-weight: 600;
+}
+
+/* Login and Signup page styles */
+.auth-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 60px 20px;
+    min-height: calc(100vh - 160px); /* Adjust for header and footer height */
+}
+
+.auth-card {
+    background-color: #1f1f1f;
+    padding: 40px 30px;
+    border-radius: 15px;
+    box-shadow: 0 8px 20px rgba(255, 60, 0, 0.3);
+    width: 100%;
+    max-width: 400px;
+}
+
+.auth-card h2 {
+    color: #ff3c00;
+    margin-bottom: 25px;
+    font-weight: 700;
+    font-size: 1.8rem;
+    text-align: center;
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    font-weight: 600;
+    color: #ff3c00;
+    font-size: 1rem;
+}
+
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group input[type="password"] {
+    padding: 12px 15px;
+    border: 2px solid #333;
+    border-radius: 8px;
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+.form-group input[type="text"]:focus,
+.form-group input[type="email"]:focus,
+.form-group input[type="password"]:focus {
+    outline: none;
+    border-color: #ff3c00;
+}
+
+.checkbox-group {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+}
+
+.checkbox-group label {
+    font-weight: 400;
+    color: #e0e0e0;
+    font-size: 0.95rem;
+}
+
+.auth-button {
+    background-color: #ff3c00;
+    color: white;
+    border: none;
+    padding: 14px 0;
+    border-radius: 30px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.auth-button:hover {
+    background-color: #e63500;
+}
+
+.auth-links {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.auth-links p {
+    color: #b0b0b0;
+    font-size: 0.95rem;
+}
+
+.auth-links a {
+    color: #ff3c00;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.3s ease;
+}
+
+.auth-links a:hover {
+    color: #e63500;
+}
+
+/* Alert messages for flash messages */
+.alert {
+    padding: 12px 15px;
+    margin: 15px 0;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.alert-error {
+    background-color: rgba(255, 107, 107, 0.15);
+    border: 1px solid rgba(255, 107, 107, 0.4);
+    color: #ff6b6b;
+}
+
+.alert-success {
+    background-color: rgba(76, 175, 80, 0.15);
+    border: 1px solid rgba(76, 175, 80, 0.4);
+    color: #4caf50;
 }

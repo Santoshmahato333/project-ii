@@ -38,10 +38,14 @@ def get_movie_rating(movie_title):
         return round(avg_rating, 1)
     return None
 
+import random
+
 # Function to get reviews for a movie
 def get_movie_reviews(movie_title, limit=3):
-    reviews = Review.query.filter_by(movie_title=movie_title).order_by(Review.created_at.desc()).limit(limit).all()
-    return reviews
+    reviews = Review.query.filter_by(movie_title=movie_title).all()
+    if reviews:
+        return [random.choice(reviews)]
+    return []
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-change-this-in-production'
@@ -111,13 +115,15 @@ def predict():
             # Get rating and reviews for this movie
             avg_rating = get_movie_rating(row['title'])
             reviews = get_movie_reviews(row['title'])
+            total_reviews = Review.query.filter_by(movie_title=row['title']).count()
 
             recommended_movies.append({
                 "title": row['title'],
                 "poster_link": poster_url,
                 "overview": description,
                 "avg_rating": avg_rating,
-                "reviews": reviews
+                "reviews": reviews,
+                "total_reviews": total_reviews
             })
 
         return render_template("index.html", recommended_movies=recommended_movies)
