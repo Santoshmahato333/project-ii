@@ -55,7 +55,8 @@
         <section class="recommendations container" id="recommendations">
             <h3>Find Movie Recommendations</h3>
             <form method="POST" action="{{ url_for('predict') }}" class="recommendation-form">
-                <input type="text" name="movie_name" placeholder="Enter a movie name" required />
+                <input type="text" id="movie_name" name="movie_name" placeholder="Enter a movie name" required list="movie-suggestions" autocomplete="off" />
+                <datalist id="movie-suggestions"></datalist>
                 <button type="submit">Get Recommendations</button>
             </form>
 
@@ -101,74 +102,126 @@
                             {{ movie.overview|safe }}
                         </div>
                         <div>
-                            <button class="review-btn" onclick="toggleReviews('{{ movie.title }}')">
+                            {% set safe_title = movie.title|replace(' ', '_')|replace('"', '')|replace("'", '') %}
+                            <button class="review-btn" onclick="toggleReviews('{{ safe_title }}')">
                                 <i class="fas fa-comment"></i> Show Reviews
                             </button>
-
-                            {% if current_user.is_authenticated %}
-                            <div class="review-section">
-                                <button class="review-btn" onclick="toggleReviewForm('{{ movie.title }}')">
-                                    <i class="fas fa-comment"></i> Write Review
-                                </button>
-                                <!-- <button class="review-btn" onclick="toggleReviewForm('{{ movie.title }}')">
-                                <i class="fas fa-comment"></i> Show Review
-                            </button> -->
-                                <div class="review-form" id="review-form-{{ movie.title }}" style="display: none;">
-                                    <form class="review-form-content"
-                                        onsubmit="submitReview(event, '{{ movie.title }}', '{{ movie.movie_id }}')">
-                                        <div class="rating-input">
-                                            <label>Your Rating:</label>
-                                            <div class="star-rating">
-                                                {% for i in range(5) %}
-                                                <input type="radio" name="rating" value="{{ i + 1 }}"
-                                                    id="star{{ i + 1 }}-{{ movie.title }}" />
-                                                <label for="star{{ i + 1 }}-{{ movie.title }}"><i
-                                                        class="far fa-star"></i></label>
+                            <div class="reviews-section" id="reviews-{{ safe_title }}" style="display: none;">
+                                {% set user_review_count = movie.reviews|length %}
+                                {% set tmdb_review_count = movie.tmdb_reviews|length %}
+                                {% if movie.reviews %}
+                                <h5>Recent Reviews</h5>
+                                {% for review in movie.reviews[:1] %}
+                                <div class="review-item" id="review-{{ review.id }}">
+                                    <div class="review-header">
+                                        <span class="reviewer">{{ review.user.username }}</span>
+                                        <span class="review-rating">
+                                            {% for i in range(5) %}
+                                            {% if i < review.rating|int %} <i class="fas fa-star filled small"></i>
+                                                {% elif review.rating|float - i >= 0.5 %}
+                                                <i class="fas fa-star-half-alt filled small"></i>
+                                                {% else %}
+                                                <i class="far fa-star small"></i>
+                                                {% endif %}
                                                 {% endfor %}
-                                            </div>
+                                        </span>
+                                    </div>
+                                    <p class="review-content">{{ review.content }}</p>
+                                    <small class="review-date">{{ review.created_at.strftime('%B %d, %Y') }}</small>
+                                </div>
+                                {% endfor %}
+                                {% if user_review_count > 1 %}
+                                <div id="user-reviews-extra-{{ safe_title }}" style="display:none;">
+                                    {% for review in movie.reviews[1:] %}
+                                    <div class="review-item" id="review-{{ review.id }}">
+                                        <div class="review-header">
+                                            <span class="reviewer">{{ review.user.username }}</span>
+                                            <span class="review-rating">
+                                                {% for i in range(5) %}
+                                                {% if i < review.rating|int %} <i class="fas fa-star filled small"></i>
+                                                    {% elif review.rating|float - i >= 0.5 %}
+                                                    <i class="fas fa-star-half-alt filled small"></i>
+                                                    {% else %}
+                                                    <i class="far fa-star small"></i>
+                                                    {% endif %}
+                                                    {% endfor %}
+                                            </span>
                                         </div>
-                                        <script>
-                                            function toggleReviews(movieTitle) {
-                                                const reviewsDiv = document.getElementById(`reviews-${movieTitle}`);
-                                                if (reviewsDiv.style.display === 'none') {
-                                                    reviewsDiv.style.display = 'block';
-                                                } else {
-                                                    reviewsDiv.style.display = 'none';
-                                                }
-                                            }
-                                        </script>
-
-                                        <textarea name="content" placeholder="Write your review..." required></textarea>
-                                        <button type="submit">Submit Review</button>
-                                    </form>
+                                        <p class="review-content">{{ review.content }}</p>
+                                        <small class="review-date">{{ review.created_at.strftime('%B %d, %Y') }}</small>
+                                    </div>
+                                    {% endfor %}
                                 </div>
+                                <button class="review-btn" id="user-showmore-{{ safe_title }}" onclick="toggleUserReviews('{{ safe_title }}')">Show More</button>
+                                {% endif %}
+                                {% endif %}
+                                {% if movie.tmdb_reviews %}
+                                <h5>TMDb Reviews</h5>
+                                {% for review in movie.tmdb_reviews[:1] %}
+                                <div class="review-item">
+                                    <div class="review-header">
+                                        <span class="reviewer">{{ review.author }}</span>
+                                    </div>
+                                    <p class="review-content" title="{{ review.content }}">
+                                        {{ review.content[:200] }}{% if review.content|length > 200 %}...{% endif %}
+                                    </p>
+                                    <small class="review-date">TMDb</small>
+                                </div>
+                                {% endfor %}
+                                {% if tmdb_review_count > 1 %}
+                                <div id="tmdb-reviews-extra-{{ safe_title }}" style="display:none;">
+                                    {% for review in movie.tmdb_reviews[1:] %}
+                                    <div class="review-item">
+                                        <div class="review-header">
+                                            <span class="reviewer">{{ review.author }}</span>
+                                        </div>
+                                        <p class="review-content" title="{{ review.content }}">
+                                            {{ review.content[:200] }}{% if review.content|length > 200 %}...{% endif %}
+                                        </p>
+                                        <small class="review-date">TMDb</small>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <button class="review-btn" id="tmdb-showmore-{{ safe_title }}" onclick="toggleTmdbReviews('{{ safe_title }}')">Show More</button>
+                                {% endif %}
+                                {% endif %}
                             </div>
-                            {% endif %}
                         </div>
-                        {% if movie.reviews %}
-                        <div class="reviews-section">
-                            <h5>Recent Reviews</h5>
-                            {% for review in movie.reviews %}
-                            <div class="review-item" id=`review-{{ review.id }}`>
-                                <div class="review-header">
-                                    <span class="reviewer">{{ review.user.username }}</span>
-                                    <span class="review-rating">
-                                        {% for i in range(5) %}
-                                        {% if i < review.rating|int %} <i class="fas fa-star filled small"></i>
-                                            {% elif review.rating|float - i >= 0.5 %}
-                                            <i class="fas fa-star-half-alt filled small"></i>
-                                            {% else %}
-                                            <i class="far fa-star small"></i>
-                                            {% endif %}
+                        {% if current_user.is_authenticated %}
+                        <div class="review-section">
+                            <button class="review-btn" onclick="toggleReviewForm('{{ movie.title }}')">
+                                <i class="fas fa-comment"></i> Write Review
+                            </button>
+                            <div class="review-form" id="review-form-{{ movie.title }}" style="display: none;">
+                                <form class="review-form-content"
+                                    onsubmit="submitReview(event, '{{ movie.title }}', '{{ movie.movie_id }}')">
+                                    <div class="rating-input">
+                                        <label>Your Rating:</label>
+                                        <div class="star-rating">
+                                            {% for i in range(5) %}
+                                            <input type="radio" name="rating" value="{{ i + 1 }}"
+                                                id="star{{ i + 1 }}-{{ movie.title }}" />
+                                            <label for="star{{ i + 1 }}-{{ movie.title }}"><i
+                                                    class="far fa-star"></i></label>
                                             {% endfor %}
-                                    </span>
-                                </div>
-                                <p class="review-content">{{ review.content }}</p>
-                                <small class="review-date">{{ review.created_at.strftime('%B %d, %Y') }}</small>
+                                        </div>
+                                    </div>
+                                    <textarea name="content" placeholder="Write your review..." required></textarea>
+                                    <button type="submit">Submit Review</button>
+                                </form>
                             </div>
-                            {% endfor %}
                         </div>
                         {% endif %}
+                        <script>
+                            function toggleReviews(movieTitle) {
+                                const reviewsDiv = document.getElementById(`reviews-${movieTitle}`);
+                                if (reviewsDiv.style.display === 'none' || reviewsDiv.style.display === '') {
+                                    reviewsDiv.style.display = 'block';
+                                } else {
+                                    reviewsDiv.style.display = 'none';
+                                }
+                            }
+                        </script>
                     </div>
                 </div>
                 {% endfor %}

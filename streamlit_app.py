@@ -8,6 +8,7 @@ from auth import auth
 import ast
 import requests
 from datetime import datetime
+from rapidfuzz import process
 
 TMDB_API_KEY = "06f75ebed790f32f3bf8e92c2f46101d"
 TMDB_SEARCH_URL = "https://api.themoviedb.org/3/search/movie"
@@ -47,6 +48,17 @@ def get_movie_reviews(movie_title, limit=3):
         return [random.choice(reviews)]
     return []
 
+def fetch_tmdb_reviews(movie_id):
+    url = f"https://api.themoviedb.org/3/movie/{movie_id}/reviews?api_key={TMDB_API_KEY}"
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+            data = response.json()
+            return data.get('results', [])
+    except Exception as e:
+        print(f"TMDB review fetch error for '{movie_id}': {e}")
+    return []
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-change-this-in-production'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
@@ -80,17 +92,18 @@ def home():
 @app.route("/predict", methods=["POST"])
 def predict():
     movie_input = request.form["movie_name"]
-
-    if movie_input not in movies_df['title'].values:
+    # Use fuzzy matching to find the closest movie title
+    titles = movies_df['title'].tolist()
+    match, score, idx = process.extractOne(movie_input, titles, score_cutoff=60)
+    if match is None:
         error_message = "Movie not found in database. Please try another movie."
         return render_template("index.html", error_message=error_message)
     else:
-        idx = movies_df[movies_df['title'] == movie_input].index[0]
+        idx = movies_df[movies_df['title'] == match].index[0]
         sim_scores = list(enumerate(similarity[idx]))
         sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
         sim_scores = sim_scores[1:6]
         movie_indices = [i[0] for i in sim_scores]
-
         recommended_movies = []
         for i in movie_indices:
             row = movies_df.iloc[i]
@@ -101,7 +114,6 @@ def predict():
             except Exception:
                 genres = str(row['genres'])
             overview = row['overview'] if 'overview' in row and pd.notnull(row['overview']) else ""
-            # Only add <br> if both genres and overview exist
             if genres and overview:
                 description = f"Genres: {genres}<br>{overview}"
             elif genres:
@@ -111,21 +123,19 @@ def predict():
             else:
                 description = ""
             poster_url = fetch_poster(row['title'])
-
-            # Get rating and reviews for this movie
             avg_rating = get_movie_rating(row['title'])
             reviews = get_movie_reviews(row['title'])
             total_reviews = Review.query.filter_by(movie_title=row['title']).count()
-
+            tmdb_reviews = fetch_tmdb_reviews(row['movie_id']) if 'movie_id' in row else []
             recommended_movies.append({
                 "title": row['title'],
                 "poster_link": poster_url,
                 "overview": description,
                 "avg_rating": avg_rating,
                 "reviews": reviews,
-                "total_reviews": total_reviews
+                "total_reviews": total_reviews,
+                "tmdb_reviews": tmdb_reviews
             })
-
         return render_template("index.html", recommended_movies=recommended_movies)
 
 @app.route("/submit_review", methods=["POST"])
@@ -173,6 +183,18 @@ def submit_review():
         "avg_rating": avg_rating
     })
 
+@app.route('/autocomplete', methods=['GET'])
+def autocomplete():
+    query = request.args.get('q', '').lower()
+    if not query:
+        return jsonify([])
+    # Fuzzy match top 10 suggestions
+    from rapidfuzz import process
+    titles = movies_df['title'].tolist()
+    results = process.extract(query, titles, limit=10, scorer=process.fuzz.WRatio)
+    suggestions = [title for title, score, idx in results if score > 50]
+    return jsonify(suggestions)
+
 @app.route("/protected")
 @login_required
 def protected():
@@ -181,4 +203,4 @@ def protected():
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-    app.run(debug=True)
+    app.run(debug=True, use_reloader=False)

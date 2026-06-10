@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
 from models import db, User
+import re
 
 auth = Blueprint('auth', __name__)
 
@@ -10,11 +11,17 @@ def login():
         return redirect(url_for('home'))
     
     if request.method == 'POST':
-        username = request.form.get('username')
+        email = request.form.get('email')
         password = request.form.get('password')
         remember = True if request.form.get('remember') else False
         
-        user = User.query.filter_by(username=username).first()
+        # Email format validation
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not email or not re.match(email_pattern, email):
+            flash('Please enter a valid email address.', 'error')
+            return redirect(url_for('auth.login'))
+        
+        user = User.query.filter_by(email=email).first()
         
         if not user or not user.check_password(password):
             flash('Please check your login details and try again.', 'error')
@@ -40,6 +47,12 @@ def signup():
         # Validation
         if not username or not email or not password:
             flash('Please fill in all fields.', 'error')
+            return redirect(url_for('auth.signup'))
+        
+        # Email format validation
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, email):
+            flash('Please enter a valid email address.', 'error')
             return redirect(url_for('auth.signup'))
         
         if password != confirm_password:
